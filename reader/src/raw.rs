@@ -911,6 +911,7 @@ fn cel_chunk<'a>(
     let (input, _) = take(7usize)(input)?;
     // We do not immediately try to load the cel, as the reserved bytes are decoupled from the type itself
     let (input, cel) = aseprite_cel(input, header, cel_type)?;
+    println!("CEL_TYPE {}", cel_type);
 
     Ok((
         input,
@@ -965,21 +966,29 @@ fn aseprite_chunk<'a>(
     let res =
         match chunk_type {
             0x0004 => {
+                println!("ROBS1");
                 debug!("Ignoring chunk of kind {} (Old palette chunk)", chunk_type);
                 None
             }
             0x0011 => {
+                println!("ROBS2");
                 debug!("Ignoring chunk of kind {} (Old palette chunk)", chunk_type);
                 None
             }
-            0x2004 => Some(all_consuming(layer_chunk)(chunk_data).map_err(|err| {
+            0x2004 => {
+                println!("ROBS3");
+                Some(all_consuming(layer_chunk)(chunk_data).map_err(|err| {
                 err.map(|err| AsepriteParseError::InvalidLayerChunk(Box::new(err)))
-            })?),
-            0x2005 => Some(
+            })?)
+            }
+            0x2005
+                => {
+                println!("ROBS4");
+                     Some(
                 all_consuming(|input: &'a [u8]| cel_chunk(input, header))(chunk_data).map_err(
                     |err| err.map(|err| AsepriteParseError::InvalidCelChunk(Box::new(err))),
                 )?,
-            ),
+            )}
             0x2006 => Some(all_consuming(cel_extra_chunk)(chunk_data).map_err(|err| {
                 err.map(|err| AsepriteParseError::InvalidCelExtraChunk(Box::new(err)))
             })?),

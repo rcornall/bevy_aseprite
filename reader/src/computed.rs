@@ -67,15 +67,20 @@ impl Aseprite {
         let mut palette = None;
         let mut frame_infos = vec![];
         let mut slices = HashMap::new();
+        let mut hitboxes = vec![];
 
         let frame_count = raw.frames.len();
 
+        let mut i : usize = 0;
         for frame in raw.frames {
+            hitboxes.push(1u8);
             frame_infos.push(AsepriteFrameInfo {
                 delay_ms: frame.duration_ms as usize,
             });
 
+            println!("1");
             for chunk in frame.chunks {
+                println!("2");
                 match chunk {
                     RawAsepriteChunk::Layer {
                         flags,
@@ -103,7 +108,7 @@ impl Aseprite {
                         );
                         layers.insert(id, layer);
                     }
-                    crate::raw::RawAsepriteChunk::Cel {
+                    RawAsepriteChunk::Cel {
                         layer_index,
                         x,
                         y,
@@ -114,7 +119,7 @@ impl Aseprite {
                             .get_mut(&(layer_index as usize))
                             .ok_or(AsepriteInvalidError::InvalidLayer(layer_index as usize))?;
 
-                        layer.add_cel(AsepriteCel::new(x as f64, y as f64, opacity, cel))?;
+                        layer.add_cel(i, AsepriteCel::new(x as f64, y as f64, opacity, cel, i))?;
                     }
                     crate::raw::RawAsepriteChunk::CelExtra {
                         flags: _,
@@ -183,6 +188,7 @@ impl Aseprite {
                     } => warn!("Not yet implemented color profile"),
                 }
             }
+            i += 1;
         }
 
         Ok(Aseprite {
@@ -228,6 +234,7 @@ pub struct AsepriteInfo {
     pub palette: Option<AsepritePalette>,
     pub transparent_palette: Option<u8>,
     pub frame_infos: Vec<AsepriteFrameInfo>,
+    pub hitboxes: Vec<u8>,
 }
 
 impl Into<AsepriteInfo> for Aseprite {
@@ -240,6 +247,7 @@ impl Into<AsepriteInfo> for Aseprite {
             palette: self.palette,
             transparent_palette: self.transparent_palette,
             frame_infos: self.frame_infos,
+            hitboxes: [1].to_vec(),
         }
     }
 }
@@ -382,7 +390,7 @@ pub enum AsepriteLayer {
         /// How deep it is nested in the layer hierarchy
         child_level: u16,
         /// Cels
-        cels: Vec<AsepriteCel>,
+        cels: HashMap<usize, AsepriteCel>,
     },
 }
 
@@ -404,7 +412,7 @@ impl AsepriteLayer {
                 opacity,
                 visible,
                 child_level,
-                cels: vec![],
+                cels: HashMap::new(),
             },
             AsepriteLayerType::Group => AsepriteLayer::Group {
                 name,
@@ -453,14 +461,16 @@ impl AsepriteLayer {
         }
     }
 
-    fn add_cel(&mut self, cel: AsepriteCel) -> AseResult<()> {
+    fn add_cel(&mut self, frame: usize, cel: AsepriteCel) -> AseResult<()> {
         match self {
             AsepriteLayer::Group { id, .. } => {
                 return Err(AsepriteError::InvalidConfiguration(
                     AsepriteInvalidError::InvalidLayer(*id),
                 ));
             }
-            AsepriteLayer::Normal { cels, .. } => cels.push(cel),
+            AsepriteLayer::Normal { cels, .. } => {
+                cels.insert(frame, cel);
+            }
         }
 
         Ok(())
@@ -471,9 +481,11 @@ impl AsepriteLayer {
             AsepriteLayer::Group { id, .. } => Err(AsepriteError::InvalidConfiguration(
                 AsepriteInvalidError::InvalidLayer(*id),
             )),
-            AsepriteLayer::Normal { cels, .. } => cels.get(frame).ok_or(
+            AsepriteLayer::Normal { cels, .. } => {
+                cels.get(&frame).ok_or(
                 AsepriteError::InvalidConfiguration(AsepriteInvalidError::InvalidFrame(frame)),
-            ),
+                )
+            }
         }
     }
 }
@@ -485,15 +497,17 @@ pub struct AsepriteCel {
     y: f64,
     opacity: u8,
     raw_cel: RawAsepriteCel,
+    frame_pos: usize,
 }
 
 impl AsepriteCel {
-    fn new(x: f64, y: f64, opacity: u8, raw_cel: RawAsepriteCel) -> Self {
+    fn new(x: f64, y: f64, opacity: u8, raw_cel: RawAsepriteCel, frame_pos: usize) -> Self {
         AsepriteCel {
             x,
             y,
             opacity,
             raw_cel,
+            frame_pos,
         }
     }
 }
@@ -737,6 +751,7 @@ fn image_for_frame(aseprite: &Aseprite, frame: u16) -> AseResult<RgbaImage> {
                             (dim.0 * dim.1) as usize
                         ],
                     },
+                    frame_pos: frame as usize,
                 };
                 &blank_cel
             }
