@@ -35,7 +35,7 @@ impl AssetLoader for AsepriteLoader {
     }
 }
 
-pub(crate) fn process_load(
+pub fn process_load(
     mut asset_events: EventReader<AssetEvent<Aseprite>>,
     mut aseprites: ResMut<Assets<Aseprite>>,
     mut images: ResMut<Assets<Image>>,
@@ -118,7 +118,7 @@ pub(crate) fn process_load(
     }
 }
 
-pub(crate) fn insert_sprite_sheet(
+pub fn insert_sprite_sheet(
     mut commands: Commands,
     aseprites: ResMut<Assets<Aseprite>>,
     mut query: Query<

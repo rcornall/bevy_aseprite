@@ -28,6 +28,9 @@ pub struct Aseprite {
     palette: Option<AsepritePalette>,
     transparent_palette: Option<u8>,
     frame_infos: Vec<AsepriteFrameInfo>,
+    // some hitboxes or enum type.
+    hitboxes: Vec<(bool,i16,i16,i16,i16)>,
+    hurtboxes: Vec<(bool,i16,i16,i16,i16)>,
 }
 
 impl Aseprite {
@@ -68,12 +71,15 @@ impl Aseprite {
         let mut frame_infos = vec![];
         let mut slices = HashMap::new();
         let mut hitboxes = vec![];
+        let mut hurtboxes = vec![];
 
         let frame_count = raw.frames.len();
 
         let mut i : usize = 0;
         for frame in raw.frames {
-            hitboxes.push(1u8);
+            println!("HI {}", i);
+            hitboxes.push((false, 0i16,0i16,0i16,0i16));
+            hurtboxes.push((false, 0i16,0i16,0i16,0i16));
             frame_infos.push(AsepriteFrameInfo {
                 delay_ms: frame.duration_ms as usize,
             });
@@ -82,6 +88,15 @@ impl Aseprite {
             for chunk in frame.chunks {
                 println!("2");
                 match chunk {
+                    crate::raw::RawAsepriteChunk::Palette {
+                        palette_size,
+                        from_color,
+                        to_color: _,
+                        entries,
+                    } => {
+                        palette =
+                            Some(AsepritePalette::from_raw(palette_size, from_color, entries));
+                    }
                     RawAsepriteChunk::Layer {
                         flags,
                         layer_type,
@@ -119,6 +134,23 @@ impl Aseprite {
                             .get_mut(&(layer_index as usize))
                             .ok_or(AsepriteInvalidError::InvalidLayer(layer_index as usize))?;
 
+                        // let x =0;
+                        // let y =0;
+                        if layer.name().contains("hitbox") {
+                            if let RawAsepriteCel::Compressed{ width, height, pixels: _} = cel {
+                                println!("width {}, height {}", width, height);
+                                println!("x,y {} {} {} {}", x,y,x.wrapping_add_unsigned(width)-1,y.wrapping_add_unsigned(height)-1);
+                                hitboxes[i]=(true,x,y,x.wrapping_add_unsigned(width)-1,y.wrapping_add_unsigned(height)-1);
+                            }
+                        }
+                        if layer.name().contains("hurtbox") {
+                            if let RawAsepriteCel::Compressed{ width, height, pixels: _} = cel {
+                                println!("HURTBOX width {}, height {}", width, height);
+                                println!("HURTBOX x,y {} {} {} {}", x,y,x.wrapping_add_unsigned(width)-1,y.wrapping_add_unsigned(height)-1);
+                                hurtboxes[i]=(true,x,y,x.wrapping_add_unsigned(width)-1,y.wrapping_add_unsigned(height)-1);
+                            }
+                        }
+
                         layer.add_cel(i, AsepriteCel::new(x as f64, y as f64, opacity, cel, i))?;
                     }
                     crate::raw::RawAsepriteChunk::CelExtra {
@@ -139,15 +171,6 @@ impl Aseprite {
                                 },
                             )
                         }))
-                    }
-                    crate::raw::RawAsepriteChunk::Palette {
-                        palette_size,
-                        from_color,
-                        to_color: _,
-                        entries,
-                    } => {
-                        palette =
-                            Some(AsepritePalette::from_raw(palette_size, from_color, entries));
                     }
                     crate::raw::RawAsepriteChunk::UserData { data: _ } => {
                         warn!("Not yet implemented user data")
@@ -204,6 +227,8 @@ impl Aseprite {
             palette,
             frame_infos,
             slices,
+            hitboxes,
+            hurtboxes,
         })
     }
 
@@ -234,7 +259,8 @@ pub struct AsepriteInfo {
     pub palette: Option<AsepritePalette>,
     pub transparent_palette: Option<u8>,
     pub frame_infos: Vec<AsepriteFrameInfo>,
-    pub hitboxes: Vec<u8>,
+    pub hitboxes: Vec<(bool,i16,i16,i16,i16)>,
+    pub hurtboxes: Vec<(bool,i16,i16,i16,i16)>,
 }
 
 impl Into<AsepriteInfo> for Aseprite {
@@ -247,7 +273,8 @@ impl Into<AsepriteInfo> for Aseprite {
             palette: self.palette,
             transparent_palette: self.transparent_palette,
             frame_infos: self.frame_infos,
-            hitboxes: [1].to_vec(),
+            hitboxes: self.hitboxes,
+            hurtboxes: self.hurtboxes,
         }
     }
 }

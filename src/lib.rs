@@ -2,7 +2,7 @@
 #![doc = include_str!("../README.MD")]
 
 pub mod anim;
-mod loader;
+pub mod loader;
 
 use anim::AsepriteAnimation;
 use bevy::prelude::*;
@@ -17,7 +17,7 @@ use reader::AsepriteInfo;
 pub struct AsepritePlugin;
 
 #[derive(Debug, SystemSet, Clone, Hash, PartialEq, Eq)]
-enum AsepriteSystems {
+pub enum AsepriteSystems {
     InsertSpriteSheet,
 }
 
@@ -26,10 +26,41 @@ impl Plugin for AsepritePlugin {
         app.add_asset::<Aseprite>()
             .add_asset_loader(loader::AsepriteLoader)
             .add_system(loader::process_load)
-            .add_system(loader::insert_sprite_sheet.in_set(AsepriteSystems::InsertSpriteSheet))
-            .add_system(anim::update_animations.after(AsepriteSystems::InsertSpriteSheet));
+            .add_system(loader::insert_sprite_sheet.in_set(AsepriteSystems::InsertSpriteSheet));
+            // .add_system(anim::update_animations.after(AsepriteSystems::InsertSpriteSheet));
     }
 }
+
+// pub fn update_animations(
+    // time: Res<Time>,
+    // aseprites: Res<Assets<Aseprite>>,
+    // mut aseprites_query: Query<(
+        // &Handle<Aseprite>,
+        // &mut AsepriteAnimation,
+        // &mut TextureAtlasSprite,
+    // )>,
+// ) {
+    // for (handle, mut animation, mut sprite) in aseprites_query.iter_mut() {
+        // let aseprite = match aseprites.get(handle) {
+            // Some(aseprite) => aseprite,
+            // None => {
+                // error!("Aseprite handle is invalid");
+                // continue;
+            // }
+        // };
+        // let info = match &aseprite.info {
+            // Some(info) => info,
+            // None => {
+                // error!("Aseprite info is None");
+                // continue;
+            // }
+        // };
+        // if animation.update(info, time.delta()) {
+            // sprite.index = aseprite.frame_to_idx[animation.current_frame];
+        // }
+    // }
+// }
+
 #[derive(Debug, Clone, TypeUuid)]
 #[uuid = "b29abc81-6179-42e4-b696-3a5a52f44f73"]
 pub struct Aseprite {

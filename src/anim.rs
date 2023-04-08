@@ -24,13 +24,14 @@ impl AsepriteTag {
     }
 }
 
-#[derive(Debug, Component, PartialEq, Eq)]
+#[derive(Debug, Component, PartialEq, Eq, Reflect)]
 pub struct AsepriteAnimation {
     pub is_playing: bool,
     tag: Option<String>,
     pub current_frame: usize,
     forward: bool,
     time_elapsed: Duration,
+    frames_elapsed: usize,
     tag_changed: bool,
 }
 
@@ -42,6 +43,7 @@ impl Default for AsepriteAnimation {
             current_frame: Default::default(),
             forward: Default::default(),
             time_elapsed: Default::default(),
+            frames_elapsed: Default::default(),
             tag_changed: true,
         }
     }
@@ -146,9 +148,10 @@ impl AsepriteAnimation {
     }
 
     // Returns whether the frame was changed
-    pub fn update(&mut self, info: &AsepriteInfo, dt: Duration) -> bool {
+    pub fn update(&mut self, time_step: f32, info: &AsepriteInfo, dt: Duration) -> bool {
         if self.tag_changed {
             self.reset(info);
+            self.frames_elapsed=0;
             return true;
         }
 
@@ -156,14 +159,21 @@ impl AsepriteAnimation {
             return false;
         }
 
-        self.time_elapsed += dt;
-        let mut current_frame_duration = self.current_frame_duration(info);
+        let timescaling = time_step*1000.0/33.3;
+        println!("time scaling: {}", timescaling as u128);
+
+        // self.time_elapsed += dt;
+        self.frames_elapsed += 1;
+        let current_frame_duration = self.current_frame_duration(info);
+        let frames = (current_frame_duration.as_millis() as u128 / (time_step*1000.) as u128) as usize;
+        println!("frames: {}/{}", self.frames_elapsed, frames);
         let mut frame_changed = false;
-        while self.time_elapsed >= current_frame_duration {
-            self.time_elapsed -= current_frame_duration;
+        while self.frames_elapsed >= frames {
+            // self.time_elapsed -= current_frame_duration;
             self.next_frame(info);
-            current_frame_duration = self.current_frame_duration(info);
+            // current_frame_duration = self.current_frame_duration(info);
             frame_changed = true;
+            self.frames_elapsed=0;
         }
         frame_changed
     }
@@ -199,35 +209,35 @@ impl AsepriteAnimation {
     }
 }
 
-pub(crate) fn update_animations(
-    time: Res<Time>,
-    aseprites: Res<Assets<Aseprite>>,
-    mut aseprites_query: Query<(
-        &Handle<Aseprite>,
-        &mut AsepriteAnimation,
-        &mut TextureAtlasSprite,
-    )>,
-) {
-    for (handle, mut animation, mut sprite) in aseprites_query.iter_mut() {
-        let aseprite = match aseprites.get(handle) {
-            Some(aseprite) => aseprite,
-            None => {
-                error!("Aseprite handle is invalid");
-                continue;
-            }
-        };
-        let info = match &aseprite.info {
-            Some(info) => info,
-            None => {
-                error!("Aseprite info is None");
-                continue;
-            }
-        };
-        if animation.update(info, time.delta()) {
-            sprite.index = aseprite.frame_to_idx[animation.current_frame];
-        }
-    }
-}
+// pub fn update_animations(
+    // time: Res<Time>,
+    // aseprites: Res<Assets<Aseprite>>,
+    // mut aseprites_query: Query<(
+        // &Handle<Aseprite>,
+        // &mut AsepriteAnimation,
+        // &mut TextureAtlasSprite,
+    // )>,
+// ) {
+    // for (handle, mut animation, mut sprite) in aseprites_query.iter_mut() {
+        // let aseprite = match aseprites.get(handle) {
+            // Some(aseprite) => aseprite,
+            // None => {
+                // error!("Aseprite handle is invalid");
+                // continue;
+            // }
+        // };
+        // let info = match &aseprite.info {
+            // Some(info) => info,
+            // None => {
+                // error!("Aseprite info is None");
+                // continue;
+            // }
+        // };
+        // if animation.update(info, time.delta()) {
+            // sprite.index = aseprite.frame_to_idx[animation.current_frame];
+        // }
+    // }
+// }
 
 impl From<&str> for AsepriteAnimation {
     fn from(tag: &str) -> AsepriteAnimation {
