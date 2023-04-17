@@ -18,6 +18,7 @@ pub struct AsepritePlugin;
 
 #[derive(Debug, SystemSet, Clone, Hash, PartialEq, Eq)]
 pub enum AsepriteSystems {
+    LoadSprites,
     InsertSpriteSheet,
 }
 

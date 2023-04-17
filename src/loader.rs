@@ -44,6 +44,7 @@ pub fn process_load(
     for event in asset_events.iter() {
         match event {
             AssetEvent::Created { handle } | AssetEvent::Modified { handle } => {
+                println!("ROBS: System: process_load");
                 // Get the created/modified aseprite
                 match aseprites.get(handle) {
                     Some(aseprite) => match aseprite.atlas.is_some() {
@@ -132,6 +133,7 @@ pub fn insert_sprite_sheet(
     >,
 ) {
     for (entity, &transform, handle, _anim) in query.iter_mut() {
+        println!("ROBS: System: insert_sprite_sheet");
         // FIXME The first time the query runs the aseprite atlas might not be ready
         // so failing to find it is expected.
         let aseprite = match aseprites.get(handle) {
@@ -153,5 +155,6 @@ pub fn insert_sprite_sheet(
             transform,
             ..Default::default()
         });
+        println!("ROBS: System: insert_sprite_sheet inserted.");
     }
 }

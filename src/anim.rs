@@ -28,9 +28,10 @@ impl AsepriteTag {
 pub struct AsepriteAnimation {
     pub is_playing: bool,
     tag: Option<String>,
+    // HOW does this rollback.
     pub current_frame: usize,
     forward: bool,
-    time_elapsed: Duration,
+    // time_elapsed: Duration,
     frames_elapsed: usize,
     tag_changed: bool,
 }
@@ -42,7 +43,7 @@ impl Default for AsepriteAnimation {
             tag: Default::default(),
             current_frame: Default::default(),
             forward: Default::default(),
-            time_elapsed: Default::default(),
+            // time_elapsed: Default::default(),
             frames_elapsed: Default::default(),
             tag_changed: true,
         }
@@ -149,6 +150,7 @@ impl AsepriteAnimation {
 
     // Returns whether the frame was changed
     pub fn update(&mut self, time_step: f32, info: &AsepriteInfo, dt: Duration) -> bool {
+        // println!("UPDATE: current_frame: {}", self.current_frame);
         if self.tag_changed {
             self.reset(info);
             self.frames_elapsed=0;
@@ -160,13 +162,17 @@ impl AsepriteAnimation {
         }
 
         let timescaling = time_step*1000.0/33.3;
-        println!("time scaling: {}", timescaling as u128);
+        // println!("time scaling: {}", timescaling as u128);
 
         // self.time_elapsed += dt;
+
         self.frames_elapsed += 1;
         let current_frame_duration = self.current_frame_duration(info);
-        let frames = (current_frame_duration.as_millis() as u128 / (time_step*1000.) as u128) as usize;
-        println!("frames: {}/{}", self.frames_elapsed, frames);
+        // use for 60+fps
+        let frames = (current_frame_duration.as_millis() as u128 / std::cmp::max((time_step*1000.) as u128, 1u128)) as usize;
+        // use for <30fps.
+        // let frames = (current_frame_duration.as_millis()*timescaling as u128 / (time_step*1000.) as u128) as usize;
+        // println!("frames: {}/{}", self.frames_elapsed, frames);
         let mut frame_changed = false;
         while self.frames_elapsed >= frames {
             // self.time_elapsed -= current_frame_duration;
@@ -175,6 +181,7 @@ impl AsepriteAnimation {
             frame_changed = true;
             self.frames_elapsed=0;
         }
+        // println!("UPDATE: processed: frame_changed {} current_frame: {}", frame_changed, self.current_frame);
         frame_changed
     }
 
