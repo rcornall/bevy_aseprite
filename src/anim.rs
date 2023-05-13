@@ -27,7 +27,7 @@ impl AsepriteTag {
 #[derive(Debug, Component, PartialEq, Eq, Reflect)]
 pub struct AsepriteAnimation {
     pub is_playing: bool,
-    tag: Option<String>,
+    pub tag: Option<String>,
     // HOW does this rollback.
     pub current_frame: usize,
     forward: bool,
@@ -149,7 +149,7 @@ impl AsepriteAnimation {
     }
 
     // Returns whether the frame was changed
-    pub fn update(&mut self, time_step: f32, info: &AsepriteInfo, dt: Duration) -> bool {
+    pub fn update(&mut self, time_step: f32, info: &AsepriteInfo) -> bool {
         // println!("UPDATE: current_frame: {}", self.current_frame);
         if self.tag_changed {
             self.reset(info);
@@ -169,7 +169,7 @@ impl AsepriteAnimation {
         self.frames_elapsed += 1;
         let current_frame_duration = self.current_frame_duration(info);
         // use for 60+fps
-        let frames = (current_frame_duration.as_millis() as u128 / std::cmp::max((time_step*1000.) as u128, 1u128)) as usize;
+        let frames = (current_frame_duration.as_millis() as f64 / (time_step*1000.) as f64) as usize;
         // use for <30fps.
         // let frames = (current_frame_duration.as_millis()*timescaling as u128 / (time_step*1000.) as u128) as usize;
         // println!("frames: {}/{}", self.frames_elapsed, frames);
